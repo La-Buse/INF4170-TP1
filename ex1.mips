@@ -1,0 +1,7 @@
+      add $t3,$s3,$s5
+      sub $t0,$zero,$t1
+      and $t2,$t3,$t4
+      or $s0,$s2,$s5
+      nor $s0,$s5,$s2
+      sub $s3,$t0,$t1
+      sub $t1,$t4,$t8
