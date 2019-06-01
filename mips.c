@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 int main(int argc, char ** argv) {
     if (argc <= 1) {
@@ -19,11 +20,14 @@ int main(int argc, char ** argv) {
             //printf("%s of length %d", "end of line!!!", lineLengthCounter);
             oneInstruction[lineLengthCounter] = '\0';
             lineLengthCounter = 0;
-            printLine(oneInstruction);
+//            printLine(oneInstruction);
+            encodeInstruction(oneInstruction);
+
         } else {
             oneInstruction[lineLengthCounter] = (char) ch;
             lineLengthCounter++;
         }
+
 
     }
     printf("%s : %d", "result from register function with a$0", getRegisterNumberValue("$a0"));
@@ -41,7 +45,52 @@ customExit(char * message) {
     exit(1);
 }
 
+encodeInstruction(char * instruction) {
+    char delim[] = " ";
+    char *ptr = strtok(instruction, delim);
+    if (ptr != NULL) {
+        printf("%s\n", ptr);
+    }
+}
+
+int getInstructionHexadecimalValue(char * instruction) {
+    if (strcmp(instruction, "add") == 0) return 0x00;
+    else if (strcmp(instruction, "addi") == 0)  return 0x08; //funct 0x20
+    else if (strcmp(instruction, "addiu") == 0)  return 0x09;
+    else if (strcmp(instruction, "addu") == 0)  return 0x00; //funct 0x21
+    else if (strcmp(instruction, "and") == 0)  return 0x00; //funct 0x24
+    else if (strcmp(instruction, "andi") == 0)  return 0x0c;
+    else if (strcmp(instruction, "beq") == 0)  return 0x04;
+    else if (strcmp(instruction, "bne") == 0)  return 0x05;
+    else if (strcmp(instruction, "j") == 0)  return 0x02;
+    else if (strcmp(instruction, "jal") == 0)  return 0x03;
+    else if (strcmp(instruction, "jr") == 0)  return 0x00; //funct 0x08
+    else if (strcmp(instruction, "lb") == 0)  return 0x20;
+    else if (strcmp(instruction, "lbu") == 0)  return 0x24;
+    else if (strcmp(instruction, "lh") == 0)  return 0x21;
+    else if (strcmp(instruction, "lhu") == 0)  return 0x25;
+    else if (strcmp(instruction, "lui") == 0)  return 0x0f;
+    else if (strcmp(instruction, "lw") == 0)  return 0x23;
+    else if (strcmp(instruction, "nor") == 0)  return 0x00; //funct 0x27
+    else if (strcmp(instruction, "or") == 0)  return 0x00; //funct 0x25
+    else if (strcmp(instruction, "ori") == 0)  return 0x0d;
+    else if (strcmp(instruction, "sb") == 0)  return 0x28;
+    else if (strcmp(instruction, "sh") == 0)  return 0x29;
+    else if (strcmp(instruction, "sll") == 0)  return 0x00; // funct 0x00
+    else if (strcmp(instruction, "slt") == 0)  return 0x00; //funct 0x2a
+    else if (strcmp(instruction, "slti") == 0)  return 0x0a;
+    else if (strcmp(instruction, "sltiu") == 0)  return 0x0b;
+    else if (strcmp(instruction, "sltu") == 0)  return 0x00; //funct 0x2b
+    else if (strcmp(instruction, "srl") == 0)  return 0x00; // funct 0x02
+    else if (strcmp(instruction, "sub") == 0)  return 0x00; // funct 0x22
+    else if (strcmp(instruction, "subu") == 0)  return 0x00; //funct 0x23
+    else if (strcmp(instruction, "sw") == 0)  return 0x2b;
+    
+}
+
+
 int getRegisterNumberValue(char *name) {
+        
         if (strcmp(name, "$zero") == 0) return 0;
         else if (strcmp(name, "$at") == 0) return 1;
         else if (strcmp(name, "$v0") == 0) return 2;
