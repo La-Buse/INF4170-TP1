@@ -1,8 +1,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
+#include <math.h>
+
+char* test(int times);
+void intToBinaryString(char* string, int numberToConvert, int currentPosition);
 
 int main(int argc, char ** argv) {
+    bitsToInt(12345, 3, 5);
+    //printf("%s\n", test(3));
+    char test[33];
+    intToBinaryString(test, 682, 31); 
+    printf("%s\n", test);
+    exit(0);
     if (argc <= 1) {
         customExit("Error, no mips file was passed as an argument to be encoded");
     }
@@ -22,12 +33,13 @@ int main(int argc, char ** argv) {
             lineLengthCounter = 0;
 //            printLine(oneInstruction);
             encodeInstruction(oneInstruction);
+            
 
         } else {
             oneInstruction[lineLengthCounter] = (char) ch;
             lineLengthCounter++;
         }
-
+      
 
     }
     printf("%s : %d", "result from register function with a$0", getRegisterNumberValue("$a0"));
@@ -51,9 +63,41 @@ encodeInstruction(char * instruction) {
     if (ptr != NULL) {
         printf("%s\n", ptr);
     }
+    printf("%d\n", getInstructionHexadecimalValue(ptr));
+}
+
+void intToBinaryString(char *string, int numberToConvert, int currentPosition) {
+    
+    if (currentPosition < 0) {
+        string[32] = '\0';
+        return;
+    } 
+    double powerOf2 = pow(2, currentPosition);
+    if (numberToConvert >= powerOf2) {
+        numberToConvert -= powerOf2;
+        string[31 - currentPosition] = '1';
+    } else {
+        string[31 - currentPosition] = '0';
+    }
+    intToBinaryString(string, numberToConvert, --currentPosition);
+
+}
+
+int32_t bitsToInt(int numberToConvert, int startingBit, int size) {
+    int32_t result=0;
+    char numberToString[size+1];
+    snprintf(numberToString, sizeof(numberToString), "%d", numberToConvert);
+    int i;
+    for (i=0; i<size;i++) {
+        if (numberToString[i] == '1') {
+            printf("%f\n",pow(2, startingBit));
+        }
+        startingBit++;
+    }
 }
 
 int getInstructionHexadecimalValue(char * instruction) {
+    
     if (strcmp(instruction, "add") == 0) return 0x00;
     else if (strcmp(instruction, "addi") == 0)  return 0x08; //funct 0x20
     else if (strcmp(instruction, "addiu") == 0)  return 0x09;
@@ -102,40 +146,27 @@ int getRegisterNumberValue(char *name) {
         else if (strcmp(name, "$t0") == 0) return 8;
         else if (strcmp(name, "$t1") == 0) return 9;
         else if (strcmp(name, "$t2") == 0) return 10;
-        else if (strcmp(name, "$t2") == 0) return 11;
-        else if (strcmp(name, "$t3") == 0) return 12;
-        else if (strcmp(name, "$t4") == 0) return 13;
-        else if (strcmp(name, "$t5") == 0) return 14;
-        else if (strcmp(name, "$t6") == 0) return 15;
-        else if (strcmp(name, "$t7") == 0) return 16;
-        else if (strcmp(name, "$s0") == 0) return 17;
-        else if (strcmp(name, "$s1") == 0) return 18;
-        else if (strcmp(name, "$s2") == 0) return 19;
-        else if (strcmp(name, "$s3") == 0) return 20;
-        else if (strcmp(name, "$s4") == 0) return 21;
-        else if (strcmp(name, "$s5") == 0) return 22;
-        else if (strcmp(name, "$s6") == 0) return 23;
-        else if (strcmp(name, "$s7") == 0) return 24;
-        else if (strcmp(name, "$t8") == 0) return 25;
-        else if (strcmp(name, "$t9") == 0) return 26;
-        else if (strcmp(name, "$k0") == 0) return 27;
-        else if (strcmp(name, "$k1") == 0) return 28;
-        else if (strcmp(name, "$gp") == 0) return 29;
-        else if (strcmp(name, "$sp") == 0) return 30;
-        else if (strcmp(name, "$fp") == 0) return 31;
-        else if (strcmp(name, "$ra") == 0) return 32;
+        else if (strcmp(name, "$t3") == 0) return 11;
+        else if (strcmp(name, "$t4") == 0) return 12;
+        else if (strcmp(name, "$t5") == 0) return 13;
+        else if (strcmp(name, "$t6") == 0) return 14;
+        else if (strcmp(name, "$t7") == 0) return 15;
+        else if (strcmp(name, "$s0") == 0) return 16;
+        else if (strcmp(name, "$s1") == 0) return 17;
+        else if (strcmp(name, "$s2") == 0) return 18;
+        else if (strcmp(name, "$s3") == 0) return 19;
+        else if (strcmp(name, "$s4") == 0) return 20;
+        else if (strcmp(name, "$s5") == 0) return 21;
+        else if (strcmp(name, "$s6") == 0) return 22;
+        else if (strcmp(name, "$s7") == 0) return 23;
+        else if (strcmp(name, "$t8") == 0) return 24;
+        else if (strcmp(name, "$t9") == 0) return 25;
+        else if (strcmp(name, "$k0") == 0) return 26;
+        else if (strcmp(name, "$k1") == 0) return 27;
+        else if (strcmp(name, "$gp") == 0) return 28;
+        else if (strcmp(name, "$sp") == 0) return 39;
+        else if (strcmp(name, "$fp") == 0) return 30;
+        else if (strcmp(name, "$ra") == 0) return 31;
 
 }
 
-/*public char ** getMipsInstructionsFromFile(char * filePath) {
-    //
-    FILE *fp;
-    fp = fopen(filePath, "r");
-    if (fp != NULL) {
-        
-    } else {
-        printf("Error while opening file\n");
-        exit(1);
-    }
-
-}*/

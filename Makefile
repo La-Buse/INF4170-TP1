@@ -1,6 +1,5 @@
 CC=gcc
-CLFAGS=
+CFLAGS = -lm
 
 mips: mips.c
-	$(CC) -o mips mips.c
-
+	$(CC) mips.c $(CFLAGS) -o mips
