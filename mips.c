@@ -6,14 +6,16 @@
 
 char* test(int times);
 void intToBinaryString(char* string, int numberToConvert, int currentPosition);
+int encodeRTypeInstruction(char *instruction, int funct);
+int getInstructionFunctValue(char *instruciton);
 
 int main(int argc, char ** argv) {
-    bitsToInt(12345, 3, 5);
+    //bitsToInt(12345, 3, 5);
     //printf("%s\n", test(3));
-    char test[33];
-    intToBinaryString(test, 682, 31); 
-    printf("%s\n", test);
-    exit(0);
+    //char test[33];
+    //intToBinaryString(test, 682, 31); 
+    //printf("%s\n", test);
+    //exit(0);
     if (argc <= 1) {
         customExit("Error, no mips file was passed as an argument to be encoded");
     }
@@ -57,13 +59,47 @@ customExit(char * message) {
     exit(1);
 }
 
-encodeInstruction(char * instruction) {
-    char delim[] = " ";
-    char *ptr = strtok(instruction, delim);
-    if (ptr != NULL) {
-        printf("%s\n", ptr);
+int encodeRTypeInstruction(char *instruction, int funct) {
+    //TODO: factoriser
+    printf("calculated funct : %d\n", funct);
+    char delim[] = " ,()"; // mettre en constante
+    char *instructionChunk;
+    
+    if (funct == 0x00 || funct == 0x02) {
+        //shift left logical and shift right logical
+        int rd = (instructionChunk= strtok(NULL, delim))[0] == '$' ? getRegisterNumberValue(instructionChunk) : (int) strtol(instructionChunk, (char **)NULL, 10);
+        int rt, shamt;
+        rt = (instructionChunk= strtok(NULL, delim))[0] == '$' ? getRegisterNumberValue(instructionChunk) : (int) strtol(instructionChunk, (char **)NULL, 10);
+        shamt = (instructionChunk= strtok(NULL, delim))[0] == '$' ? getRegisterNumberValue(instructionChunk) : (int) strtol(instructionChunk, (char **)NULL, 10);
+        return rd << 11 | rt << 16 | shamt << 6 | funct
+    } else if (funct == 0x001000) {
+        //jump register
+        int rs = (instructionChunk= strtok(NULL, delim))[0] == '$' ? getRegisterNumberValue(instructionChunk) : (int) strtol(instructionChunk, (char **)NULL, 10);
+        return rs << 21 | funct;
+    } else {
+        int rs, rt;
+        rs = (instructionChunk= strtok(NULL, delim))[0] == '$' ? getRegisterNumberValue(instructionChunk) : (int) strtol(instructionChunk, (char **)NULL, 10);
+        rt = (instructionChunk= strtok(NULL, delim))[0] == '$' ? getRegisterNumberValue(instructionChunk) : (int) strtol(instructionChunk, (char **)NULL, 10);
+        printf("calculated registers: %d %d %d\n", rd, rs, rt);
+        return rd << 11 | rs << 21 | rt << 16 | funct;
     }
-    printf("%d\n", getInstructionHexadecimalValue(ptr));
+    
+    
+    
+}
+
+encodeInstruction(char * instruction) {
+    int instructionChunk=0;
+    char delim[] = " ,()";
+    char *ptr = strtok(instruction, delim);
+    int result;
+    if (getInstructionHexadecimalValue(ptr) == 0) {
+        //printf("this is a R encoded instruction: %s\n", ptr);
+        
+        result = encodeRTypeInstruction(ptr, getInstructionFunctValue(ptr));
+    else {
+        printf("this is not a R encoded instruction: %s\n", ptr);
+    }
 }
 
 void intToBinaryString(char *string, int numberToConvert, int currentPosition) {
@@ -94,6 +130,23 @@ int32_t bitsToInt(int numberToConvert, int startingBit, int size) {
         }
         startingBit++;
     }
+}
+
+int getInstructionFunctValue(char *instruction) {
+
+    if (strcmp(instruction, "add") == 0) return 0x20;
+    else if (strcmp(instruction, "addu") == 0)  return 0x21;
+    else if (strcmp(instruction, "and") == 0)  return 0x24;
+    else if (strcmp(instruction, "jr") == 0)  return 0x08;
+    else if (strcmp(instruction, "nor") == 0)  return 0x27;
+    else if (strcmp(instruction, "or") == 0)  return 0x25;
+    else if (strcmp(instruction, "sll") == 0)  return 0x00;
+    else if (strcmp(instruction, "slt") == 0)  return 0x2a;
+    else if (strcmp(instruction, "sltu") == 0)  return 0x2b;
+    else if (strcmp(instruction, "srl") == 0)  return 0x02;
+    else if (strcmp(instruction, "sub") == 0)  return 0x22;
+    else if (strcmp(instruction, "subu") == 0)  return 0x23;
+
 }
 
 int getInstructionHexadecimalValue(char * instruction) {
