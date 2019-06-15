@@ -51,32 +51,35 @@ customExit(char * message) {
 }
 
 int encodeRTypeInstruction(char *instruction, int funct) {
-    //TODO: factoriser et enlever les check de $
     printf("calculated funct : %d\n", funct);
     char delim[] = " ,()"; // mettre en constante
     char *nextToken;
     
     if (funct == 0x00 || funct == 0x02) {
+
         //shift left logical and shift right logical
         int rd = (nextToken= strtok(NULL, delim))[0] == '$' ? getRegisterNumberValue(nextToken) : (int) strtol(nextToken, (char **)NULL, 10);
-        int rt, shamt;
-        rt = (nextToken= strtok(NULL, delim))[0] == '$' ? getRegisterNumberValue(nextToken) : (int) strtol(nextToken, (char **)NULL, 10);
-        shamt = (nextToken= strtok(NULL, delim))[0] == '$' ? getRegisterNumberValue(nextToken) : (int) strtol(nextToken, (char **)NULL, 10);
+        int rt = getRegisterNumberValue(strtok(NULL, delim));
+        int shamt = (int) strtol(strtok(NULL, delim), (char **)NULL, 10);
+
         return rd << 11 | rt << 16 | shamt << 6 | funct;
+
     } else if (funct == 0x001000) {
+
         //jump register
-        int rs = (nextToken= strtok(NULL, delim))[0] == '$' ? getRegisterNumberValue(nextToken) : (int) strtol(nextToken, (char **)NULL, 10);
+        int rs = strtol(strtok(NULL, delim), (char **)NULL, 10);
+
         return rs << 21 | funct;
+
     } else {
-        int rs, rt;
-        nextToken= strtok(NULL, delim);
-        int rd = getRegisterNumberValue(nextToken);
-        nextToken= strtok(NULL, delim);
-        rs = getRegisterNumberValue(nextToken);
-        nextToken= strtok(NULL, delim);
-        rt = getRegisterNumberValue(nextToken);
-        printf("calculated registers: %d %d %d\n", rd, rs, rt);
+
+        int rs, rt, rd;
+        rd = getRegisterNumberValue(strtok(NULL, delim));
+        rs = getRegisterNumberValue(strtok(NULL, delim));
+        rt = getRegisterNumberValue(strtok(NULL, delim));
+
         return rd << 11 | rs << 21 | rt << 16 | funct;
+
     }
 }
 
