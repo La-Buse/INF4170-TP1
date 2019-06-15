@@ -4,24 +4,25 @@
 #include <stdint.h>
 #include <math.h>
 
+char *asmFileExtension  = ".asm";
+
 char* test(int times);
 void intToBinaryString(char* string, int numberToConvert, int currentPosition);
 int encodeRTypeInstruction(char *instruction, int funct);
-int getInstructionFunctValue(char *instruciton);
+int encodeITypeInstruction(char *instruction, int opcode);
+int getInstructionFunctValue(char *instruction);
 
 int main(int argc, char ** argv) {
-    //bitsToInt(12345, 3, 5);
-    //printf("%s\n", test(3));
-    //char test[33];
-    //intToBinaryString(test, 682, 31); 
-    //printf("%s\n", test);
-    //exit(0);
     if (argc <= 1) {
         customExit("Error, no mips file was passed as an argument to be encoded");
     }
     FILE *mipsFilePointer = fopen(argv[1],"r");
     if (mipsFilePointer == NULL) {
-        customExit("Error while opening file");    
+        customExit("Error while opening MIPS file");    
+    }
+    FILE *asmFilePointer = fopen(strcat(argv[1], asmFileExtension), "wb");
+    if (asmFilePointer == NULL) {
+        customExit("Error while opening ASM file");
     }
     char ch;
     int lineLengthCounter = 0;
@@ -33,25 +34,17 @@ int main(int argc, char ** argv) {
             //printf("%s of length %d", "end of line!!!", lineLengthCounter);
             oneInstruction[lineLengthCounter] = '\0';
             lineLengthCounter = 0;
-//            printLine(oneInstruction);
-            encodeInstruction(oneInstruction);
+            int encodedInstruction = encodeInstruction(oneInstruction);
+            fwrite(&encodedInstruction, 1, sizeof(encodedInstruction), asmFilePointer);
             
-
         } else {
             oneInstruction[lineLengthCounter] = (char) ch;
             lineLengthCounter++;
-        }
-      
-
+        }   
     }
-    printf("%s : %d", "result from register function with a$0", getRegisterNumberValue("$a0"));
-    //getRegisterNumberValue("$a0");
+    fclose(asmFilePointer);
     fclose(mipsFilePointer);
     return 0;
-}
-
-printLine(char * line) {
-   printf("%s\n",line); 
 }
 
 customExit(char * message) {
@@ -60,7 +53,7 @@ customExit(char * message) {
 }
 
 int encodeRTypeInstruction(char *instruction, int funct) {
-    //TODO: factoriser
+    //TODO: factoriser et enlever les check de $
     printf("calculated funct : %d\n", funct);
     char delim[] = " ,()"; // mettre en constante
     char *instructionChunk;
@@ -71,21 +64,73 @@ int encodeRTypeInstruction(char *instruction, int funct) {
         int rt, shamt;
         rt = (instructionChunk= strtok(NULL, delim))[0] == '$' ? getRegisterNumberValue(instructionChunk) : (int) strtol(instructionChunk, (char **)NULL, 10);
         shamt = (instructionChunk= strtok(NULL, delim))[0] == '$' ? getRegisterNumberValue(instructionChunk) : (int) strtol(instructionChunk, (char **)NULL, 10);
-        return rd << 11 | rt << 16 | shamt << 6 | funct
+        return rd << 11 | rt << 16 | shamt << 6 | funct;
     } else if (funct == 0x001000) {
         //jump register
         int rs = (instructionChunk= strtok(NULL, delim))[0] == '$' ? getRegisterNumberValue(instructionChunk) : (int) strtol(instructionChunk, (char **)NULL, 10);
         return rs << 21 | funct;
     } else {
         int rs, rt;
+        int rd = (instructionChunk= strtok(NULL, delim))[0] == '$' ? getRegisterNumberValue(instructionChunk) : (int) strtol(instructionChunk, (char **)NULL, 10);
         rs = (instructionChunk= strtok(NULL, delim))[0] == '$' ? getRegisterNumberValue(instructionChunk) : (int) strtol(instructionChunk, (char **)NULL, 10);
         rt = (instructionChunk= strtok(NULL, delim))[0] == '$' ? getRegisterNumberValue(instructionChunk) : (int) strtol(instructionChunk, (char **)NULL, 10);
         printf("calculated registers: %d %d %d\n", rd, rs, rt);
         return rd << 11 | rs << 21 | rt << 16 | funct;
     }
-    
-    
-    
+}
+
+encodeITypeInstruction(char *instruction, int opcode) {
+    //addi  R[rt] = R[rs] + Imm,                                                         addi $s3,$s3,1,       # s3 = s3 + 1              OK
+    //addiu R[rt] = R[rs] + Imm,                                                         addiu $s3,$s3,1       # s3 = s3 + 1              OK
+    //andi  R[rt] = R[rs] & Imm,                                                         andi $s2,$t0,7,       # s2 = t0 & 7              OK
+    //beq   if (R[rs] == R[rt]) then PC = PC + 4 + Imm,                                  beq $s1,$zero,Fin,    # si s1 == 0, on branche à l'étiquette Fin  NOT OK $s1 va dans rs, $zero dans rt 
+    //bne   if (R[rs] != R[rt]) then PC = PC + 4 + Imm,                                  bne $s1,$zero,Fin,    # si s1 != 0, on branche à l'étiquette Fin  NOT OK
+    //lb    R[rt] = 24*signe, M[R[rs] + Imm]                                             lb $s2,0($t2)                                    OK
+    //lbu   R[rt] = 24*0, M[R[rs]] (moins significatif), des 0 dans le reste             lbu $s2,0($t2)                                   OK
+    //lh    R[rt] = 16*signe, M[R[rs] + Imm]                                             lh $s2,0($t2)                                    OK
+    //lhu   R[rt] = 16*0, M[R[rs]] (moins significatifs), des 0 dans le reste            lhu $s2,0($t2)                                   OK
+    //lui   R[rt] = Imm (dans les 2 octets les plus significatifs), des 0 dans le reste  lui $s2,8             # s2 = 8 << 16             OK            
+    //lw    R[rt] = M[R[rs] + Imm]                                                       lw $t0,32($s3)        # t0 = s3[8]               OK
+    //ori   R[rt] = R[rs] | Imm                                                          ori $t0,$s5,7         # t0 = s5 | 7              OK
+    //sb    M[R[rs] + Imm] = R[rt] (octet le moins significatif)                         sb $t1,0($s2)         # s2[0] = t1               OK
+    //sh    M[R[rs] + Imm] = R[rt] (2 octets les moins significatifs)                    sh $t1,0($s2)         # s2[0] = t1               OK
+    //slti  R[rt] = (R[rs] < Imm) ? 1 : 0                                                slti $t0,$s2,10       # t0 = (s2 < 10) ? 1 : 0   OK
+    //stliu R[rt] = (R[rs] < Imm) ? 1 : 0                                                sltiu $t0,$s2,10      # t0 = (s2 < 10) ? 1 : 0   OK
+    //sw    M[R[rs] + Imm] = R[rt]                                                       sw $t0,1200($t1)      # t1[300] = t0             OK
+    //le premier token lu est toujours rt pour les instructions de type I
+    //ensuite, si le deuxieme token lu est un est un registre, alors c'est rs et le dernier token est imm
+    //sinon, le deuxieme token lu est imm est le dernier est rs
+    char delim[] = " ,()"; // mettre en constante
+    int rs, rt, immediateValue;
+    if (opcode == 0x04 || opcode == 0x05) {
+        rs = getRegisterNumberValue(strtok(NULL,delim));
+        rt = getRegisterNumberValue(strtok(NULL,delim));
+    } else {
+        char * nextToken = strtok(NULL,delim);
+        rt = getRegisterNumberValue(nextToken);
+        printf("token:%s register value:%d \n", nextToken, rt);
+        rs, immediateValue;
+        nextToken = strtok(NULL,delim);
+        if (nextToken[0] == '$') {
+            int registerValue = getRegisterNumberValue(nextToken);
+            printf("token:%s register value: %d\n", nextToken, registerValue);
+            nextToken = strtok(NULL,delim);
+            immediateValue = (int) strtol(nextToken, (char **)NULL, 10);
+            registerValue = getRegisterNumberValue(nextToken);
+            printf("immediate value:%d\n", immediateValue);
+            //rs = getRegisterNumberValue(nextToken);
+            //immediateValue = (int) strtol(strtok(NULL,delim), (char **)NULL, 10);
+        } else {
+            immediateValue = (int) strtol(nextToken, (char **)NULL, 10);
+            printf("token:%s \n", nextToken);
+            nextToken = strtok(NULL,delim);
+            int registerValue = getRegisterNumberValue(nextToken);
+            printf("token:%s register value: %d\n", nextToken, registerValue);
+            //immediateValue = (int) strtol(strtok(NULL,delim), (char **)NULL, 10);
+            //rs = getRegisterNumberValue(nextToken);
+        }
+    }
+    return opcode << 26| rs << 21 | rt << 16 | immediateValue;
 }
 
 encodeInstruction(char * instruction) {
@@ -93,43 +138,16 @@ encodeInstruction(char * instruction) {
     char delim[] = " ,()";
     char *ptr = strtok(instruction, delim);
     int result;
-    if (getInstructionHexadecimalValue(ptr) == 0) {
-        //printf("this is a R encoded instruction: %s\n", ptr);
+    int opcode = getInstructionHexadecimalValue(ptr);
+    if (opcode == 0) {
+        printf("this is a R encoded instruction: %s\n", ptr);
         
         result = encodeRTypeInstruction(ptr, getInstructionFunctValue(ptr));
-    else {
-        printf("this is not a R encoded instruction: %s\n", ptr);
+    } else if (opcode >= 0x03) {
+        printf("this is a i encoded instruction: %s\n", ptr);
+        result = encodeITypeInstruction(ptr, opcode);
     }
-}
-
-void intToBinaryString(char *string, int numberToConvert, int currentPosition) {
-    
-    if (currentPosition < 0) {
-        string[32] = '\0';
-        return;
-    } 
-    double powerOf2 = pow(2, currentPosition);
-    if (numberToConvert >= powerOf2) {
-        numberToConvert -= powerOf2;
-        string[31 - currentPosition] = '1';
-    } else {
-        string[31 - currentPosition] = '0';
-    }
-    intToBinaryString(string, numberToConvert, --currentPosition);
-
-}
-
-int32_t bitsToInt(int numberToConvert, int startingBit, int size) {
-    int32_t result=0;
-    char numberToString[size+1];
-    snprintf(numberToString, sizeof(numberToString), "%d", numberToConvert);
-    int i;
-    for (i=0; i<size;i++) {
-        if (numberToString[i] == '1') {
-            printf("%f\n",pow(2, startingBit));
-        }
-        startingBit++;
-    }
+    return result;
 }
 
 int getInstructionFunctValue(char *instruction) {
