@@ -11,6 +11,11 @@ void intToBinaryString(char* string, int numberToConvert, int currentPosition);
 int encodeRTypeInstruction(char *instruction, int funct);
 int encodeITypeInstruction(char *instruction, int opcode);
 int getInstructionFunctValue(char *instruction);
+int customExit(char *message);
+int encodeInstruction(char *instruction);
+int getInstructionHexadecimalValue(char * instruction);
+int getRegisterNumberValue(char *name);
+int getInstructionFunctValue(char *instruction);
 
 int main(int argc, char ** argv) {
     if (argc <= 1) {
@@ -45,7 +50,7 @@ int main(int argc, char ** argv) {
     return 0;
 }
 
-customExit(char * message) {
+int customExit(char * message) {
     printf("%s\n", message);
     exit(1);
 }
@@ -80,7 +85,7 @@ int encodeRTypeInstruction(char *instruction, int funct) {
     }
 }
 
-encodeITypeInstruction(char *instruction, int opcode) {
+int encodeITypeInstruction(char *instruction, int opcode) {
     //addi  R[rt] = R[rs] + Imm,                                                         addi $s3,$s3,1,       # s3 = s3 + 1              OK
     //addiu R[rt] = R[rs] + Imm,                                                         addiu $s3,$s3,1       # s3 = s3 + 1              OK
     //andi  R[rt] = R[rs] & Imm,                                                         andi $s2,$t0,7,       # s2 = t0 & 7              OK
