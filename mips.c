@@ -28,10 +28,8 @@ int main(int argc, char ** argv) {
     int lineLengthCounter = 0;
     char * oneInstruction = (char*)calloc(32, sizeof(char));
     while ((ch = fgetc(mipsFilePointer)) != EOF) {
-        //printf("%c", ch);
         
         if (ch == '\n') {
-            //printf("%s of length %d", "end of line!!!", lineLengthCounter);
             oneInstruction[lineLengthCounter] = '\0';
             lineLengthCounter = 0;
             int encodedInstruction = encodeInstruction(oneInstruction);
@@ -56,24 +54,27 @@ int encodeRTypeInstruction(char *instruction, int funct) {
     //TODO: factoriser et enlever les check de $
     printf("calculated funct : %d\n", funct);
     char delim[] = " ,()"; // mettre en constante
-    char *instructionChunk;
+    char *nextToken;
     
     if (funct == 0x00 || funct == 0x02) {
         //shift left logical and shift right logical
-        int rd = (instructionChunk= strtok(NULL, delim))[0] == '$' ? getRegisterNumberValue(instructionChunk) : (int) strtol(instructionChunk, (char **)NULL, 10);
+        int rd = (nextToken= strtok(NULL, delim))[0] == '$' ? getRegisterNumberValue(nextToken) : (int) strtol(nextToken, (char **)NULL, 10);
         int rt, shamt;
-        rt = (instructionChunk= strtok(NULL, delim))[0] == '$' ? getRegisterNumberValue(instructionChunk) : (int) strtol(instructionChunk, (char **)NULL, 10);
-        shamt = (instructionChunk= strtok(NULL, delim))[0] == '$' ? getRegisterNumberValue(instructionChunk) : (int) strtol(instructionChunk, (char **)NULL, 10);
+        rt = (nextToken= strtok(NULL, delim))[0] == '$' ? getRegisterNumberValue(nextToken) : (int) strtol(nextToken, (char **)NULL, 10);
+        shamt = (nextToken= strtok(NULL, delim))[0] == '$' ? getRegisterNumberValue(nextToken) : (int) strtol(nextToken, (char **)NULL, 10);
         return rd << 11 | rt << 16 | shamt << 6 | funct;
     } else if (funct == 0x001000) {
         //jump register
-        int rs = (instructionChunk= strtok(NULL, delim))[0] == '$' ? getRegisterNumberValue(instructionChunk) : (int) strtol(instructionChunk, (char **)NULL, 10);
+        int rs = (nextToken= strtok(NULL, delim))[0] == '$' ? getRegisterNumberValue(nextToken) : (int) strtol(nextToken, (char **)NULL, 10);
         return rs << 21 | funct;
     } else {
         int rs, rt;
-        int rd = (instructionChunk= strtok(NULL, delim))[0] == '$' ? getRegisterNumberValue(instructionChunk) : (int) strtol(instructionChunk, (char **)NULL, 10);
-        rs = (instructionChunk= strtok(NULL, delim))[0] == '$' ? getRegisterNumberValue(instructionChunk) : (int) strtol(instructionChunk, (char **)NULL, 10);
-        rt = (instructionChunk= strtok(NULL, delim))[0] == '$' ? getRegisterNumberValue(instructionChunk) : (int) strtol(instructionChunk, (char **)NULL, 10);
+        nextToken= strtok(NULL, delim);
+        int rd = getRegisterNumberValue(nextToken);
+        nextToken= strtok(NULL, delim);
+        rs = getRegisterNumberValue(nextToken);
+        nextToken= strtok(NULL, delim);
+        rt = getRegisterNumberValue(nextToken);
         printf("calculated registers: %d %d %d\n", rd, rs, rt);
         return rd << 11 | rs << 21 | rt << 16 | funct;
     }
@@ -100,54 +101,44 @@ encodeITypeInstruction(char *instruction, int opcode) {
     //le premier token lu est toujours rt pour les instructions de type I
     //ensuite, si le deuxieme token lu est un est un registre, alors c'est rs et le dernier token est imm
     //sinon, le deuxieme token lu est imm est le dernier est rs
+
     char delim[] = " ,()"; // mettre en constante
     int rs, rt, immediateValue;
-    if (opcode == 0x04 || opcode == 0x05) {
-        rs = getRegisterNumberValue(strtok(NULL,delim));
-        rt = getRegisterNumberValue(strtok(NULL,delim));
+
+    char * firstToken = strtok(NULL,delim);
+    char * secondToken = strtok(NULL,delim);
+    char * thirdToken = strtok(NULL,delim);
+
+    rt = getRegisterNumberValue(firstToken);
+    if (firstToken[0] == '$') {
+
+        rs = getRegisterNumberValue(secondToken);
+        immediateValue = (int) strtol(thirdToken, (char **)NULL, 10);
+
     } else {
-        char * nextToken = strtok(NULL,delim);
-        rt = getRegisterNumberValue(nextToken);
-        printf("token:%s register value:%d \n", nextToken, rt);
-        rs, immediateValue;
-        nextToken = strtok(NULL,delim);
-        if (nextToken[0] == '$') {
-            int registerValue = getRegisterNumberValue(nextToken);
-            printf("token:%s register value: %d\n", nextToken, registerValue);
-            nextToken = strtok(NULL,delim);
-            immediateValue = (int) strtol(nextToken, (char **)NULL, 10);
-            registerValue = getRegisterNumberValue(nextToken);
-            printf("immediate value:%d\n", immediateValue);
-            //rs = getRegisterNumberValue(nextToken);
-            //immediateValue = (int) strtol(strtok(NULL,delim), (char **)NULL, 10);
-        } else {
-            immediateValue = (int) strtol(nextToken, (char **)NULL, 10);
-            printf("token:%s \n", nextToken);
-            nextToken = strtok(NULL,delim);
-            int registerValue = getRegisterNumberValue(nextToken);
-            printf("token:%s register value: %d\n", nextToken, registerValue);
-            //immediateValue = (int) strtol(strtok(NULL,delim), (char **)NULL, 10);
-            //rs = getRegisterNumberValue(nextToken);
-        }
+
+        immediateValue = (int) strtol(secondToken, (char **)NULL, 10);
+        rs = getRegisterNumberValue(thirdToken);
+
     }
+
     return opcode << 26| rs << 21 | rt << 16 | immediateValue;
 }
 
-encodeInstruction(char * instruction) {
-    int instructionChunk=0;
+int encodeInstruction(char * instruction) {
+
     char delim[] = " ,()";
     char *ptr = strtok(instruction, delim);
-    int result;
     int opcode = getInstructionHexadecimalValue(ptr);
+
     if (opcode == 0) {
-        printf("this is a R encoded instruction: %s\n", ptr);
         
-        result = encodeRTypeInstruction(ptr, getInstructionFunctValue(ptr));
+        return encodeRTypeInstruction(ptr, getInstructionFunctValue(ptr));
+
     } else if (opcode >= 0x03) {
-        printf("this is a i encoded instruction: %s\n", ptr);
-        result = encodeITypeInstruction(ptr, opcode);
+
+        return encodeITypeInstruction(ptr, opcode);
     }
-    return result;
 }
 
 int getInstructionFunctValue(char *instruction) {
@@ -164,7 +155,7 @@ int getInstructionFunctValue(char *instruction) {
     else if (strcmp(instruction, "srl") == 0)  return 0x02;
     else if (strcmp(instruction, "sub") == 0)  return 0x22;
     else if (strcmp(instruction, "subu") == 0)  return 0x23;
-
+    else return -1;
 }
 
 int getInstructionHexadecimalValue(char * instruction) {
@@ -200,6 +191,7 @@ int getInstructionHexadecimalValue(char * instruction) {
     else if (strcmp(instruction, "sub") == 0)  return 0x00; // funct 0x22
     else if (strcmp(instruction, "subu") == 0)  return 0x00; //funct 0x23
     else if (strcmp(instruction, "sw") == 0)  return 0x2b;
+    else return -1;
     
 }
 
@@ -238,6 +230,6 @@ int getRegisterNumberValue(char *name) {
         else if (strcmp(name, "$sp") == 0) return 39;
         else if (strcmp(name, "$fp") == 0) return 30;
         else if (strcmp(name, "$ra") == 0) return 31;
-
+        else return -1;
 }
 
