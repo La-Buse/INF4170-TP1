@@ -4,7 +4,8 @@
 #include <stdint.h>
 #include <math.h>
 
-char *asmFileExtension  = ".asm";
+static const char *asmFileExtension  = ".asm";
+static const char *instructionTokenDelimiters = " ,()";
 
 char* test(int times);
 void intToBinaryString(char* string, int numberToConvert, int currentPosition);
@@ -56,32 +57,32 @@ int customExit(char * message) {
 }
 
 int encodeRTypeInstruction(char *instruction, int funct) {
-    printf("calculated funct : %d\n", funct);
-    char delim[] = " ,()"; // mettre en constante
+
     char *nextToken;
     
     if (funct == 0x00 || funct == 0x02) {
 
         //shift left logical and shift right logical
-        int rd = (nextToken= strtok(NULL, delim))[0] == '$' ? getRegisterNumberValue(nextToken) : (int) strtol(nextToken, (char **)NULL, 10);
-        int rt = getRegisterNumberValue(strtok(NULL, delim));
-        int shamt = (int) strtol(strtok(NULL, delim), (char **)NULL, 10);
+
+        int rd = (nextToken= strtok(NULL, instructionTokenDelimiters))[0] == '$' ? getRegisterNumberValue(nextToken) : (int) strtol(nextToken, (char **)NULL, 10);
+        int rt = getRegisterNumberValue(strtok(NULL, instructionTokenDelimiters));
+        int shamt = (int) strtol(strtok(NULL, instructionTokenDelimiters), (char **)NULL, 10);
 
         return rd << 11 | rt << 16 | shamt << 6 | funct;
 
     } else if (funct == 0x001000) {
 
         //jump register
-        int rs = strtol(strtok(NULL, delim), (char **)NULL, 10);
+        int rs = strtol(strtok(NULL, instructionTokenDelimiters), (char **)NULL, 10);
 
         return rs << 21 | funct;
 
     } else {
 
         int rs, rt, rd;
-        rd = getRegisterNumberValue(strtok(NULL, delim));
-        rs = getRegisterNumberValue(strtok(NULL, delim));
-        rt = getRegisterNumberValue(strtok(NULL, delim));
+        rd = getRegisterNumberValue(strtok(NULL, instructionTokenDelimiters));
+        rs = getRegisterNumberValue(strtok(NULL, instructionTokenDelimiters));
+        rt = getRegisterNumberValue(strtok(NULL, instructionTokenDelimiters));
 
         return rd << 11 | rs << 21 | rt << 16 | funct;
 
@@ -113,12 +114,12 @@ int encodeITypeInstruction(char *instruction, int opcode) {
     char delim[] = " ,()"; // mettre en constante
     int rs, rt, immediateValue;
 
-    char * firstToken = strtok(NULL,delim);
-    char * secondToken = strtok(NULL,delim);
-    char * thirdToken = strtok(NULL,delim);
+    char * firstToken = strtok(NULL,instructionTokenDelimiters);
+    char * secondToken = strtok(NULL,instructionTokenDelimiters);
+    char * thirdToken = strtok(NULL,instructionTokenDelimiters);
 
     rt = getRegisterNumberValue(firstToken);
-    if (firstToken[0] == '$') {
+    if (secondToken[0] == '$') {
 
         rs = getRegisterNumberValue(secondToken);
         immediateValue = (int) strtol(thirdToken, (char **)NULL, 10);
@@ -135,8 +136,8 @@ int encodeITypeInstruction(char *instruction, int opcode) {
 
 int encodeInstruction(char * instruction) {
 
-    char delim[] = " ,()";
-    char *ptr = strtok(instruction, delim);
+    char instructionTokenDelimiters[] = " ,()";
+    char *ptr = strtok(instruction, instructionTokenDelimiters);
     int opcode = getInstructionHexadecimalValue(ptr);
 
     if (opcode == 0) {
